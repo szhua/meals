@@ -1,0 +1,53 @@
+{
+	"pages": [{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "uni-app",
+				"navigationStyle": "custom"
+
+			}
+		},
+		{
+			"path": "pages/dishes/list",
+			"style": {
+				"navigationBarTitleText": "菜品管理",
+				"navigationStyle": "default"
+			}
+		},
+		{
+			"path": "pages/dishes/add",
+			"style": {
+				"navigationStyle": "default",
+				"navigationBarTitleText": "添加菜品"
+			}
+		},
+		{
+			"path": "pages/plan/create",
+			"style": {
+				"navigationStyle": "default",
+				"navigationBarTitleText": "创建计划"
+			}
+		},
+		{
+			"path": "pages/plan/detail",
+			"style": {
+				"navigationStyle": "default",
+				"navigationBarTitleText": "计划详情"
+			}
+		},
+		{
+			"path": "pages/plan/history",
+			"style": {
+				"navigationStyle": "default",
+				"navigationBarTitleText": "历史计划"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8"
+	},
+	"uniIdRouter": {}
+}

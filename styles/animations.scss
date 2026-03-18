@@ -1,0 +1,162 @@
+/**
+ * 共享动画库
+ * 提取通用的 keyframe 动画供全局使用
+ */
+
+/* ==================== 淡入动画 ==================== */
+
+/* 基础淡入 - 用于空状态 */
+@keyframes empty-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 卡片进入动画 - 用于列表项 */
+@keyframes card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 上浮淡入 */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(40rpx);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== 缩放动画 ==================== */
+
+/* 脉冲缩放 - 用于 FAB 按钮 */
+@keyframes fab-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50%, 100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* 轻微脉冲 - 用于当前计划卡片 */
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 4rpx 20rpx rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 4rpx 30rpx rgba(34, 197, 94, 0.5);
+  }
+}
+
+/* ==================== 位移动画 ==================== */
+
+/* 浮动效果 - 用于插图的轻量浮动 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+/* 阴影脉冲 - 配合浮动效果 */
+@keyframes shadow-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+}
+
+/* 蒸汽上升效果 */
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(20rpx) scaleY(0.5);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40rpx) scaleY(1.5);
+  }
+}
+
+/* ==================== 光泽动画 ==================== */
+
+/* 按钮光泽扫过 */
+@keyframes btn-shine {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+/* 未来计划背景流动 */
+@keyframes background-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ==================== 旋转动画 ==================== */
+
+/* 加载旋转 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== 动画时长类 ==================== */
+
+/* 快速动画：150ms */
+/* 标准动画：250ms */
+/* 慢速动画：400ms */
+
+/* ==================== 减少动态效果支持 ==================== */
+
+/*
+ * 为有动画的元素添加此 mixin 以支持 prefers-reduced-motion
+ * 用法：@include respect-reduced-motion
+ */
+@mixin respect-reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    &, * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ==================== 缓动函数 ==================== */
+
+/* 入场缓动：cubic-bezier(0.25, 1, 0.5, 1) */
+/* 弹性缓动：cubic-bezier(0.68, -0.55, 0.265, 1.55) */

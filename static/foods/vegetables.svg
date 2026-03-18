@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <circle cx="200" cy="200" r="160" fill="#F5FAF5"/>
+  
+  <!-- Plate shadow -->
+  <ellipse cx="200" cy="280" rx="130" ry="60" fill="#C8D2C8" opacity="0.4"/>
+  
+  <!-- Plate -->
+  <ellipse cx="200" cy="270" rx="140" ry="70" fill="#FFFFFF"/>
+  <ellipse cx="200" cy="265" rx="125" ry="60" fill="#F8FAF8"/>
+  
+  <!-- Broccoli -->
+  <ellipse cx="130" cy="200" rx="40" ry="35" fill="#4CAF50"/>
+  <ellipse cx="130" cy="190" rx="35" ry="30" fill="#66BB6A"/>
+  <ellipse cx="115" cy="185" rx="15" ry="15" fill="#81C784"/>
+  <ellipse cx="145" cy="185" rx="15" ry="15" fill="#81C784"/>
+  <rect x="120" y="220" width="20" height="50" fill="#43A047"/>
+  
+  <!-- Carrot -->
+  <polygon points="215,280 230,150 245,280" fill="#FF9800"/>
+  <polygon points="220,265 230,160 240,265" fill="#FFA726"/>
+  <ellipse cx="230" cy="140" rx="15" ry="10" fill="#4CAF50"/>
+  <ellipse cx="218" cy="145" rx="5" ry="10" fill="#66BB6A"/>
+  <ellipse cx="242" cy="145" rx="5" ry="10" fill="#66BB6A"/>
+  
+  <!-- Tomato -->
+  <ellipse cx="310" cy="220" rx="40" ry="40" fill="#F44336"/>
+  <ellipse cx="310" cy="215" rx="35" ry="35" fill="#E53935"/>
+  <ellipse cx="300" cy="205" rx="15" ry="15" fill="#EF5350"/>
+  <ellipse cx="310" cy="175" rx="12" ry="8" fill="#4CAF50"/>
+  
+  <!-- Lettuce leaf -->
+  <ellipse cx="165" cy="270" rx="35" ry="25" fill="#8BC34A"/>
+  <ellipse cx="165" cy="268" rx="28" ry="20" fill="#AED581"/>
+</svg>

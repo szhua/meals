@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <circle cx="200" cy="200" r="160" fill="#FFFAF5"/>
+  
+  <!-- Basket shadow -->
+  <ellipse cx="200" cy="320" rx="140" ry="30" fill="#C8B4A8" opacity="0.4"/>
+  
+  <!-- Basket base -->
+  <ellipse cx="200" cy="300" rx="130" ry="50" fill="#A1887F"/>
+  <ellipse cx="200" cy="295" rx="115" ry="40" fill="#BCAAA4"/>
+  
+  <!-- Basket rim -->
+  <path d="M 70 250 Q 200 200 330 250" fill="none" stroke="#8D6E63" stroke-width="15"/>
+  
+  <!-- Weave pattern -->
+  <path d="M 100 270 Q 200 250 300 270" fill="none" stroke="#827C7C" stroke-width="2" opacity="0.5"/>
+  <path d="M 110 285 Q 200 265 290 285" fill="none" stroke="#827C7C" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Apple -->
+  <ellipse cx="140" cy="210" rx="40" ry="45" fill="#EF5350"/>
+  <ellipse cx="140" cy="205" rx="35" ry="40" fill="#E53935"/>
+  <ellipse cx="130" cy="195" rx="10" ry="12" fill="#F44336"/>
+  <ellipse cx="140" cy="165" rx="8" ry="8" fill="#4CAF50"/>
+  
+  <!-- Banana -->
+  <path d="M 190 200 Q 240 160 300 175 Q 290 195 285 190 Q 250 180 200 210 Z" fill="#FFEB3B"/>
+  <path d="M 195 205 Q 240 168 295 182 Q 285 198 280 193 Q 250 183 205 208 Z" fill="#FFF9C4"/>
+  
+  <!-- Orange -->
+  <ellipse cx="290" cy="230" rx="40" ry="40" fill="#FF9800"/>
+  <ellipse cx="290" cy="225" rx="35" ry="35" fill="#FFA726"/>
+  <ellipse cx="280" cy="215" rx="15" ry="15" fill="#FFB74D"/>
+  <ellipse cx="290" cy="190" rx="8" ry="6" fill="#4CAF50"/>
+  
+  <!-- Grapes -->
+  <ellipse cx="165" cy="240" rx="15" ry="15" fill="#9C27B0"/>
+  <ellipse cx="185" cy="250" rx="15" ry="15" fill="#9C27B0"/>
+  <ellipse cx="170" cy="260" rx="15" ry="15" fill="#9C27B0"/>
+  <ellipse cx="190" cy="265" rx="15" ry="15" fill="#9C27B0"/>
+  <ellipse cx="180" cy="280" rx="15" ry="15" fill="#9C27B0"/>
+  <!-- Grape highlights -->
+  <ellipse cx="160" cy="235" rx="5" ry="5" fill="#BA68C8"/>
+  <ellipse cx="180" cy="245" rx="5" ry="5" fill="#BA68C8"/>
+  <ellipse cx="165" cy="255" rx="5" ry="5" fill="#BA68C8"/>
+  <ellipse cx="185" cy="260" rx="5" ry="5" fill="#BA68C8"/>
+</svg>

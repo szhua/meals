@@ -1,0 +1,93 @@
+/**
+ * 深色模式样式
+ * 使用 prefers-color-scheme: dark 媒体查询自动应用
+ */
+
+@media (prefers-color-scheme: dark) {
+  /* 深色模式颜色变量 */
+  page {
+    --dm-bg-primary: #111827;
+    --dm-bg-secondary: #1F2937;
+    --dm-bg-tertiary: #374151;
+    --dm-text-primary: #F9FAFB;
+    --dm-text-secondary: #D1D5DB;
+    --dm-text-tertiary: #9CA3AF;
+    --dm-border: #4B5563;
+    --dm-divider: #374151;
+  }
+
+  /* 容器背景 */
+  .container {
+    background: var(--dm-bg-secondary) !important;
+  }
+
+  /* 卡片背景 */
+  .form-section,
+  .dish-card,
+  .search-section,
+  .category-scroll,
+  .plan-card {
+    background: var(--dm-bg-primary) !important;
+  }
+
+  /* 次要背景 */
+  .upload-placeholder,
+  .input,
+  .picker,
+  .input-with-unit,
+  .category-item,
+  .search-empty-icon,
+  .empty-tip,
+  .meal-type-item,
+  .dish-image-placeholder {
+    background: var(--dm-bg-tertiary) !important;
+  }
+
+  /* 文本颜色 */
+  .section-title,
+  .dish-name,
+  .search-input {
+    color: var(--dm-text-primary) !important;
+  }
+
+  .label,
+  .category-text,
+  .meal-name,
+  .nutrition-label,
+  .action-text,
+  .btn-text {
+    color: var(--dm-text-secondary) !important;
+  }
+
+  .section-hint,
+  .empty-desc,
+  .empty-tip,
+  .nutrition-unit,
+  .category-tag-text {
+    color: var(--dm-text-tertiary) !important;
+  }
+
+  /* 边框和分割线 */
+  .cal-body,
+  .category-scroll,
+  .submit-bar {
+    border-color: var(--dm-border) !important;
+  }
+
+  .color-divider,
+  .list-footer {
+    border-color: var(--dm-divider) !important;
+  }
+
+  /* 输入框和表单 */
+  .input,
+  .input-with-unit .input {
+    color: var(--dm-text-primary) !important;
+  }
+
+  /* 深色模式下的特殊处理 */
+  /* 反转图片亮度 */
+  image.dark-mode-invert {
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+}

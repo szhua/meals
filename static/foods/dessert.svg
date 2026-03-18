@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <circle cx="200" cy="200" r="160" fill="#FFF5FA"/>
+  
+  <!-- Plate shadow -->
+  <ellipse cx="200" cy="340" rx="150" ry="35" fill="#DCC8D0" opacity="0.4"/>
+  
+  <!-- Plate -->
+  <ellipse cx="200" cy="330" rx="150" ry="40" fill="#FFFFFF"/>
+  <ellipse cx="200" cy="325" rx="130" ry="30" fill="#F8F8F8"/>
+  
+  <!-- Cake base layer -->
+  <rect x="100" y="240" width="200" height="80" fill="#8B5A2B"/>
+  <ellipse cx="200" cy="245" rx="100" ry="20" fill="#A1887F"/>
+  
+  <!-- Frosting layer -->
+  <rect x="100" y="195" width="200" height="50" fill="#FFB7C5"/>
+  <ellipse cx="200" cy="200" rx="100" ry="20" fill="#FFC8D2"/>
+  
+  <!-- Cream swirl on top -->
+  <ellipse cx="160" cy="155" rx="25" ry="20" fill="#FFFFFF"/>
+  <ellipse cx="180" cy="145" rx="25" ry="20" fill="#FCFCFC"/>
+  <ellipse cx="200" cy="155" rx="25" ry="20" fill="#FFFFFF"/>
+  <ellipse cx="220" cy="145" rx="25" ry="20" fill="#FCFCFC"/>
+  <ellipse cx="240" cy="155" rx="25" ry="20" fill="#FFFFFF"/>
+  
+  <!-- Cherry on top -->
+  <ellipse cx="200" cy="120" rx="18" ry="18" fill="#D32F2F"/>
+  <ellipse cx="195" cy="115" rx="8" ry="8" fill="#EF5350"/>
+  <path d="M 200 100 Q 205 85 210 90" fill="none" stroke="#4CAF50" stroke-width="3"/>
+  
+  <!-- Decorative drips -->
+  <ellipse cx="120" cy="230" rx="10" ry="15" fill="#FFB7C5"/>
+  <ellipse cx="155" cy="225" rx="10" ry="20" fill="#FFB7C5"/>
+  <ellipse cx="190" cy="228" rx="10" ry="18" fill="#FFB7C5"/>
+  <ellipse cx="225" cy="222" rx="10" ry="25" fill="#FFB7C5"/>
+  <ellipse cx="260" cy="226" rx="10" ry="20" fill="#FFB7C5"/>
+  <ellipse cx="285" cy="230" rx="10" ry="15" fill="#FFB7C5"/>
+  
+  <!-- Sprinkles -->
+  <rect x="130" y="205" width="16" height="4" fill="#FF9800" rx="2"/>
+  <rect x="165" y="200" width="16" height="4" fill="#4CAF50" rx="2"/>
+  <rect x="195" y="203" width="16" height="4" fill="#2196F3" rx="2"/>
+  <rect x="225" y="198" width="16" height="4" fill="#9C27B0" rx="2"/>
+  <rect x="260" y="202" width="16" height="4" fill="#FF9800" rx="2"/>
+</svg>
