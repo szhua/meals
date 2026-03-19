@@ -77,8 +77,16 @@
 </template>
 
 <script>
-	import store from "@/utils/store.js";
+	import api from "@/api/index.js";
 	import zPaging from "@/uni_modules/z-paging/components/z-paging/z-paging.vue";
+
+	// 格式化日期
+	function formatDate(date) {
+		const y = date.getFullYear();
+		const m = String(date.getMonth() + 1).padStart(2, "0");
+		const d = String(date.getDate()).padStart(2, "0");
+		return `${y}-${m}-${d}`;
+	}
 
 	export default {
 		components: {
@@ -92,15 +100,15 @@
 		},
 		computed: {
 			currentPlan() {
-				const today = store.formatDate(new Date());
+				const today = formatDate(new Date());
 				return this.plans.find((p) => today >= p.startDate && today <= p.endDate);
 			},
 			futurePlans() {
-				const today = store.formatDate(new Date());
+				const today = formatDate(new Date());
 				return this.plans.filter((p) => p.startDate > today);
 			},
 			historyPlans() {
-				const today = store.formatDate(new Date());
+				const today = formatDate(new Date());
 				return this.plans.filter((p) => p.endDate < today);
 			},
 		},
@@ -120,10 +128,16 @@
 				// 本地数据，直接完成
 				this.$refs.paging?.complete([1]);
 			},
-			loadPlans() {
-				this.plans = store.getPlans().sort((a, b) => {
-					return new Date(b.startDate) - new Date(a.startDate);
-				});
+			async loadPlans() {
+				try {
+					const res = await api.getPlans();
+					this.plans = (res.data.list || []).sort((a, b) => {
+						return new Date(b.startDate) - new Date(a.startDate);
+					});
+				} catch (error) {
+					console.error("加载规划列表失败:", error);
+					this.plans = [];
+				}
 			},
 			calculateDays(plan) {
 				const start = new Date(plan.startDate);
@@ -147,14 +161,22 @@
 					confirmColor: "#f44336",
 					confirmText: "删除",
 					cancelText: "取消",
-					success: (res) => {
+					success: async (res) => {
 						if (res.confirm) {
-							store.deletePlan(plan.id);
-							this.loadPlans();
-							uni.showToast({
-								title: "已删除",
-								icon: "success"
-							});
+							try {
+								await api.deletePlan(plan.id);
+								await this.loadPlans();
+								uni.showToast({
+									title: "已删除",
+									icon: "success"
+								});
+							} catch (error) {
+								console.error("删除规划失败:", error);
+								uni.showToast({
+									title: "删除失败",
+									icon: "none"
+								});
+							}
 						}
 					},
 				});

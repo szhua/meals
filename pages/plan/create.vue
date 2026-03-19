@@ -164,7 +164,27 @@
 </template>
 
 <script>
-import store from "@/utils/store.js";
+import api from "@/api/index.js";
+
+// 格式化日期
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// 获取日期范围
+function getDateRange(startDate, endDate) {
+  const dates = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  while (start <= end) {
+    dates.push(formatDate(new Date(start)));
+    start.setDate(start.getDate() + 1);
+  }
+  return dates;
+}
 
 export default {
   data() {
@@ -204,7 +224,7 @@ export default {
       const totalDays = lastDay.getDate();
 
       // 今天的日期字符串
-      const todayStr = store.formatDate(new Date());
+      const todayStr = formatDate(new Date());
 
       // 上个月的天数填充
       const prevMonthLastDay = new Date(
@@ -215,7 +235,7 @@ export default {
       for (let i = startDayOfWeek - 1; i >= 0; i--) {
         const dayNum = prevMonthLastDay - i;
         const date = new Date(this.currentYear, this.currentMonth - 1, dayNum);
-        const dateStr = store.formatDate(date);
+        const dateStr = formatDate(date);
         days.push({
           dayNum,
           date: dateStr,
@@ -229,7 +249,7 @@ export default {
       // 当月的天数
       for (let i = 1; i <= totalDays; i++) {
         const date = new Date(this.currentYear, this.currentMonth, i);
-        const dateStr = store.formatDate(date);
+        const dateStr = formatDate(date);
         const isPlanned = this.plannedDates.has(dateStr);
         const isSelected = this.isDateSelected(dateStr);
         const isInRange = this.isDateInRange(dateStr);
@@ -254,7 +274,7 @@ export default {
       const remainingDays = 42 - days.length;
       for (let i = 1; i <= remainingDays; i++) {
         const date = new Date(this.currentYear, this.currentMonth + 1, i);
-        const dateStr = store.formatDate(date);
+        const dateStr = formatDate(date);
         days.push({
           dayNum: i,
           date: dateStr,
@@ -274,8 +294,14 @@ export default {
     this.quickSelectThisWeek();
   },
   methods: {
-    loadPlannedDates() {
-      this.plannedDates = store.getPlannedDates();
+    async loadPlannedDates() {
+      try {
+        const res = await api.getPlannedDates();
+        this.plannedDates = new Set(res.data.dates || []);
+      } catch (error) {
+        console.error("加载已规划日期失败:", error);
+        this.plannedDates = new Set();
+      }
     },
     isDateSelected(dateStr) {
       return dateStr === this.form.startDate || dateStr === this.form.endDate;
@@ -334,11 +360,11 @@ export default {
       this.isQuickSelecting = true;
       this.selectedQuick = String(days);
       const today = new Date();
-      const start = store.formatDate(today);
+      const start = formatDate(today);
       const endDate = new Date(today);
       endDate.setDate(endDate.getDate() + days - 1);
       this.form.startDate = start;
-      this.form.endDate = store.formatDate(endDate);
+      this.form.endDate = formatDate(endDate);
       this.checkConflicts();
       this.$nextTick(() => {
         this.isQuickSelecting = false;
@@ -357,19 +383,25 @@ export default {
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
 
-      this.form.startDate = store.formatDate(monday);
-      this.form.endDate = store.formatDate(sunday);
+      this.form.startDate = formatDate(monday);
+      this.form.endDate = formatDate(sunday);
       this.checkConflicts();
       this.$nextTick(() => {
         this.isQuickSelecting = false;
       });
     },
-    checkConflicts() {
+    async checkConflicts() {
       if (this.form.startDate && this.form.endDate) {
-        this.conflictPlans = store.checkDateConflict(
-          this.form.startDate,
-          this.form.endDate,
-        );
+        try {
+          const res = await api.checkDateConflict(
+            this.form.startDate,
+            this.form.endDate
+          );
+          this.conflictPlans = res.data.conflicts || [];
+        } catch (error) {
+          console.error("检查日期冲突失败:", error);
+          this.conflictPlans = [];
+        }
       } else {
         this.conflictPlans = [];
       }
@@ -377,37 +409,29 @@ export default {
     onWeeklyResetChange(e) {
       this.form.weeklyReset = e.detail.value;
     },
-    createPlan() {
+    async createPlan() {
       if (!this.canSubmit) return;
 
-      const doCreate = () => {
+      const doCreate = async () => {
         const plan = {
           startDate: this.form.startDate,
           endDate: this.form.endDate,
           weeklyReset: this.form.weeklyReset,
-          days: {},
         };
 
-        const dates = store.getDateRange(
-          this.form.startDate,
-          this.form.endDate,
-        );
-        dates.forEach((date) => {
-          plan.days[date] = {
-            breakfast: [],
-            lunch: [],
-            dinner: [],
-          };
-        });
+        try {
+          const res = await api.createPlan(plan);
+          uni.showToast({ title: "创建成功", icon: "success" });
 
-        const newPlan = store.addPlan(plan);
-        uni.showToast({ title: "创建成功", icon: "success" });
-
-        setTimeout(() => {
-          uni.redirectTo({
-            url: "/pages/plan/detail?id=" + newPlan.id,
-          });
-        }, 500);
+          setTimeout(() => {
+            uni.redirectTo({
+              url: "/pages/plan/detail?id=" + res.data.id,
+            });
+          }, 500);
+        } catch (error) {
+          console.error("创建规划失败:", error);
+          uni.showToast({ title: "创建失败，请重试", icon: "none" });
+        }
       };
 
       if (this.conflictPlans.length > 0) {

@@ -131,9 +131,9 @@
         <view class="dish-content">
           <view class="dish-header">
             <text class="dish-name">{{ dish.name }}</text>
-            <view class="dish-category-tag" v-if="dish.category">
+            <view class="dish-category-tag" v-if="dish.categoryId">
               <text class="category-tag-text">{{
-                getCategoryName(dish.category)
+                getCategoryName(dish.categoryId)
               }}</text>
             </view>
           </view>
@@ -181,7 +181,7 @@
 </template>
 
 <script>
-import store from "@/utils/store.js";
+import api from "@/api/index.js";
 import zPaging from "@/uni_modules/z-paging/components/z-paging/z-paging.vue";
 
 export default {
@@ -201,7 +201,7 @@ export default {
     filteredDishes() {
       let result = this.dishes;
       if (this.currentCategory) {
-        result = result.filter((d) => d.category === this.currentCategory);
+        result = result.filter((d) => d.categoryId === this.currentCategory);
       }
       if (this.keyword) {
         result = result.filter((d) => d.name.includes(this.keyword));
@@ -222,12 +222,21 @@ export default {
      */
     queryList(page, pageSize) {
       this.loadData();
-      // 本地数据，直接完成
-      this.$refs.paging?.complete();
     },
-    loadData() {
-      this.categories = store.getCategories();
-      this.dishes = store.getDishes();
+    async loadData() {
+      try {
+        const [categoriesRes, dishesRes] = await Promise.all([
+          api.getCategories(),
+          api.getDishes(),
+        ]);
+        this.categories = categoriesRes.data || [];
+        this.dishes = dishesRes.data.list || [];
+        this.$refs.paging?.complete();
+      } catch (error) {
+        console.error("加载数据失败:", error);
+        uni.showToast({ title: "加载失败，请重试", icon: "none" });
+        this.$refs.paging?.complete();
+      }
     },
     selectCategory(id) {
       this.currentCategory = id;
@@ -260,11 +269,17 @@ export default {
         url: "/pages/dishes/add?name=" + encodeURIComponent(this.keyword),
       });
     },
-    addSampleDishes() {
+    async addSampleDishes() {
+      // 获取分类列表用于查找categoryId
+      const categoryMap = {};
+      this.categories.forEach(c => {
+        categoryMap[c.code] = c.id;
+      });
+
       const sampleDishes = [
         {
           name: "番茄炒蛋",
-          category: "vegetable",
+          categoryId: categoryMap['vegetable'] || 3,
           calories: 180,
           protein: 8,
           carbs: 12,
@@ -272,7 +287,7 @@ export default {
         },
         {
           name: "红烧肉",
-          category: "meat",
+          categoryId: categoryMap['meat'] || 2,
           calories: 450,
           protein: 25,
           carbs: 8,
@@ -280,7 +295,7 @@ export default {
         },
         {
           name: "清炒时蔬",
-          category: "vegetable",
+          categoryId: categoryMap['vegetable'] || 3,
           calories: 80,
           protein: 3,
           carbs: 6,
@@ -288,45 +303,56 @@ export default {
         },
         {
           name: "米饭",
-          category: "staple",
+          categoryId: categoryMap['staple'] || 1,
           calories: 230,
           carbs: 50,
           mealTypes: ["lunch", "dinner"],
         },
         {
           name: "紫菜蛋花汤",
-          category: "soup",
+          categoryId: categoryMap['soup'] || 4,
           calories: 60,
           protein: 4,
           mealTypes: ["lunch", "dinner"],
         },
       ];
 
-      sampleDishes.forEach((dish) => {
-        store.addDish(dish);
-      });
-
-      this.loadData();
-
-      uni.showToast({
-        title: "已添加5道示例菜品",
-        icon: "success",
-      });
+      try {
+        for (const dish of sampleDishes) {
+          await api.addDish(dish);
+        }
+        this.loadData();
+        uni.showToast({
+          title: "已添加5道示例菜品",
+          icon: "success",
+        });
+      } catch (error) {
+        console.error("添加示例菜品失败:", error);
+        uni.showToast({ title: "添加失败，请重试", icon: "none" });
+      }
     },
     editDish(id) {
       uni.navigateTo({
         url: "/pages/dishes/add?id=" + id,
       });
     },
-    confirmDelete(dish) {
+    async confirmDelete(dish) {
       // 检查菜品是否在计划中使用
-      const { inPlan, planDateRange } = store.isDishInPlans(dish.id)
+      let inPlan = false;
+      let planDateRange = "";
+      try {
+        const checkRes = await api.checkDishInPlans(dish.id);
+        inPlan = checkRes.data?.inPlan || false;
+        planDateRange = checkRes.data?.planDateRange || "";
+      } catch (error) {
+        console.error("检查菜品使用情况失败:", error);
+      }
 
-      let content = ''
+      let content = "";
       if (inPlan) {
-        content = `「${dish.name}」已在规划 ${planDateRange} 中使用。\n删除后相关计划中的菜品也会移除，确定要删除吗？`
+        content = `「${dish.name}」已在规划 ${planDateRange} 中使用。\n删除后相关计划中的菜品也会移除，确定要删除吗？`;
       } else {
-        content = `确定要删除「${dish.name}」吗？\n删除后无法恢复。`
+        content = `确定要删除「${dish.name}」吗？\n删除后无法恢复。`;
       }
 
       uni.showModal({
@@ -335,14 +361,19 @@ export default {
         confirmColor: "#EF4444",
         confirmText: "删除",
         cancelText: "取消",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            store.deleteDish(dish.id);
-            this.loadData();
-            uni.showToast({
-              title: "已删除",
-              icon: "success",
-            });
+            try {
+              await api.deleteDish(dish.id);
+              this.loadData();
+              uni.showToast({
+                title: "已删除",
+                icon: "success",
+              });
+            } catch (error) {
+              console.error("删除菜品失败:", error);
+              uni.showToast({ title: "删除失败，请重试", icon: "none" });
+            }
           }
         },
       });

@@ -1,4 +1,23 @@
 <template>
+	<!-- 未登录遮罩 -->
+	<view class="login-mask" v-if="!isLoggedIn">
+		<view class="login-content">
+			<view class="login-illustration">
+				<view class="login-plate"></view>
+			</view>
+			<text class="login-title">欢迎使用三餐记食</text>
+			<text class="login-desc" v-if="isLoggingIn">正在进入...</text>
+			<text class="login-desc" v-else>点击开始您的健康饮食之旅</text>
+			<view class="login-btn" v-if="!isLoggingIn" @tap="handleLogin">
+				<text class="login-btn-text">立即开始</text>
+			</view>
+			<view class="login-loading" v-else>
+				<view class="loading-spinner"></view>
+			</view>
+		</view>
+	</view>
+
+	<!-- 主内容区域 -->
 	<view class="containers">
 		<z-paging ref="paging" style="flex: 1;" :loadingMoreEnabled="false" v-model="dataList" @query="queryList"
 			:fixed="false">
@@ -8,7 +27,8 @@
 					<view class="greeting-row">
 						<view class="greeting-text">
 							<text class="greeting-emoji">{{ greeting.emoji }}</text>
-							<text class="greeting-main">{{ greeting.text }}</text>
+							<text class="greeting-main">{{ greeting.text }}<text
+									v-if="userInfo?.nickname">，{{ userInfo.nickname }}</text></text>
 						</view>
 						<!-- 连续打卡徽章 -->
 						<view class="streak-badge" v-if="streak.current > 0" @tap="showStreakDetail">
@@ -253,8 +273,57 @@
 </template>
 
 <script>
-	import store from "@/utils/store.js";
+	import api from "@/api/index.js";
 	import zPaging from "@/uni_modules/z-paging/components/z-paging/z-paging.vue";
+
+	// 工具函数
+	function formatDate(date) {
+		const y = date.getFullYear();
+		const m = String(date.getMonth() + 1).padStart(2, "0");
+		const d = String(date.getDate()).padStart(2, "0");
+		return `${y}-${m}-${d}`;
+	}
+
+	function getGreeting() {
+		const hour = new Date().getHours();
+		if (hour >= 5 && hour < 9) {
+			return {
+				text: "早上好",
+				emoji: "🌅",
+				message: "新的一天，从健康早餐开始",
+			};
+		} else if (hour >= 9 && hour < 12) {
+			return {
+				text: "上午好",
+				emoji: "☀️",
+				message: "上午时光，记得准备午餐哦",
+			};
+		} else if (hour >= 12 && hour < 14) {
+			return {
+				text: "中午好",
+				emoji: "🍱",
+				message: "午餐时间，好好享用美食",
+			};
+		} else if (hour >= 14 && hour < 18) {
+			return {
+				text: "下午好",
+				emoji: "🌤️",
+				message: "下午茶时光，来点水果吧",
+			};
+		} else if (hour >= 18 && hour < 22) {
+			return {
+				text: "晚上好",
+				emoji: "🌙",
+				message: "晚餐时间，吃得健康一点",
+			};
+		} else {
+			return {
+				text: "夜深了",
+				emoji: "🌙",
+				message: "早点休息，明天继续",
+			};
+		}
+	}
 
 	export default {
 		components: {
@@ -277,10 +346,19 @@
 					emoji: "",
 					message: "",
 				},
+				todayNutrition: {
+					calories: 0,
+					protein: 0,
+					carbs: 0,
+					fat: 0,
+				},
 				showCelebration: false,
 				showStreakModal: false,
 				hasShownCelebration: false,
 				showWelcomeGuide: false,
+				userInfo: null,
+				isLoggedIn: false,
+				isLoggingIn: true,
 			};
 		},
 		computed: {
@@ -304,7 +382,7 @@
 						lunch: [],
 						dinner: [],
 					};
-				const today = store.formatDate(new Date());
+				const today = formatDate(new Date());
 				return (
 					this.todayPlan.days[today] || {
 						breakfast: [],
@@ -314,12 +392,7 @@
 				);
 			},
 			totalNutrition() {
-				const allDishes = [
-					...this.todayMeals.breakfast,
-					...this.todayMeals.lunch,
-					...this.todayMeals.dinner,
-				];
-				return store.calculateDayNutrition(allDishes);
+				return this.todayNutrition;
 			},
 			dishCount() {
 				return this.dishes.length;
@@ -350,7 +423,7 @@
 			},
 		},
 		onShow() {
-			this.loadData();
+			this.checkLoginState();
 		},
 		watch: {
 			isAllMealsComplete(val) {
@@ -360,29 +433,146 @@
 			},
 		},
 		methods: {
-			loadData() {
-				this.todayPlan = store.getTodayPlan();
-				this.dishes = store.getDishes();
-				this.plans = store.getPlans();
-				this.streak = store.getStreak();
-				this.greeting = store.getGreeting();
+			// 检查登录状态
+			async checkLoginState() {
+				this.isLoggingIn = true;
+				const token = uni.getStorageSync('token');
 
-				// 检查是否首次使用（无菜品且无规划）
-				const hasSeenWelcome = uni.getStorageSync("hasSeenWelcome");
-				if (
-					!hasSeenWelcome &&
-					this.dishes.length === 0 &&
-					this.plans.length === 0
-				) {
-					this.showWelcomeGuide = true;
+				if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
+					try {
+						// 尝试获取用户信息验证token有效性
+						const res = await api.getUserInfo();
+						if (res.data) {
+							this.userInfo = res.data;
+							uni.setStorageSync('userInfo', res.data);
+							this.isLoggedIn = true;
+							this.isLoggingIn = false;
+							// 登录成功后加载数据
+							this.loadData();
+							return;
+						}
+					} catch (error) {
+						console.log('Token无效，需要重新登录');
+						uni.removeStorageSync('token');
+						uni.removeStorageSync('userInfo');
+					}
 				}
 
-				// 检查是否刚完成三餐
-				if (this.isAllMealsComplete && !this.hasShownCelebration) {
-					// 延迟一点显示，让用户先看到页面
-					setTimeout(() => {
-						this.triggerCelebration();
-					}, 500);
+				// 无有效token，尝试静默登录
+				try {
+					// #ifdef MP-WEIXIN
+					const loginRes = await api.wxLogin();
+					if (loginRes.data) {
+						this.userInfo = loginRes.data.userInfo;
+						this.isLoggedIn = true;
+						this.isLoggingIn = false;
+						this.loadData();
+						return;
+					}
+					// #endif
+				} catch (error) {
+					console.error('自动登录失败:', error);
+				}
+
+				// 登录失败，显示登录按钮
+				this.isLoggingIn = false;
+				this.isLoggedIn = false;
+			},
+
+			// 手动登录
+			async handleLogin() {
+				this.isLoggingIn = true;
+				try {
+					// #ifdef MP-WEIXIN
+					const res = await api.wxLogin();
+					if (res.data) {
+						this.userInfo = res.data.userInfo;
+						this.isLoggedIn = true;
+						this.isLoggingIn = false;
+						this.loadData();
+					}
+					// #endif
+
+					// #ifndef MP-WEIXIN
+					uni.showToast({
+						title: '请在微信小程序中使用',
+						icon: 'none'
+					});
+					this.isLoggingIn = false;
+					// #endif
+				} catch (error) {
+					console.error('登录失败:', error);
+					uni.showToast({
+						title: '登录失败，请重试',
+						icon: 'none'
+					});
+					this.isLoggingIn = false;
+				}
+			},
+
+			async loadData() {
+				try {
+					// 并行请求所有数据
+					const [todayPlanRes, dishesRes, plansRes, streakRes] = await Promise.all([
+						api.getTodayPlan(),
+						api.getDishes(),
+						api.getPlans(),
+						api.getStreak(),
+					]);
+
+					this.todayPlan = todayPlanRes.data;
+					this.dishes = dishesRes.data.list || [];
+					this.plans = plansRes.data.list || [];
+					this.streak = streakRes.data || {
+						current: 0,
+						longest: 0,
+						lastDate: "",
+						checkIns: [],
+					};
+					this.greeting = getGreeting();
+
+					// 计算今日营养
+					if (this.todayPlan && this.todayMeals) {
+						const allDishIds = [
+							...this.todayMeals.breakfast,
+							...this.todayMeals.lunch,
+							...this.todayMeals.dinner,
+						].filter(Boolean);
+
+						if (allDishIds.length > 0) {
+							const nutritionRes = await api.calculateNutrition(allDishIds);
+							this.todayNutrition = nutritionRes.data || {
+								calories: 0,
+								protein: 0,
+								carbs: 0,
+								fat: 0,
+							};
+						}
+					}
+
+					// 检查是否首次使用（无菜品且无规划）
+					const hasSeenWelcome = uni.getStorageSync("hasSeenWelcome");
+					if (
+						!hasSeenWelcome &&
+						this.dishes.length === 0 &&
+						this.plans.length === 0
+					) {
+						this.showWelcomeGuide = true;
+					}
+
+					// 检查是否刚完成三餐
+					if (this.isAllMealsComplete && !this.hasShownCelebration) {
+						// 延迟一点显示，让用户先看到页面
+						setTimeout(() => {
+							this.triggerCelebration();
+						}, 500);
+					}
+				} catch (error) {
+					console.error("加载数据失败:", error);
+					uni.showToast({
+						title: "加载失败，请重试",
+						icon: "none"
+					});
 				}
 			},
 			getDishName(id) {
@@ -411,13 +601,17 @@
 					url: "/pages/plan/create",
 				});
 			},
-			triggerCelebration() {
+			async triggerCelebration() {
 				this.showCelebration = true;
 				this.hasShownCelebration = true;
 
 				// 更新打卡记录
-				store.updateStreak();
-				this.streak = store.getStreak();
+				try {
+					const res = await api.checkIn();
+					this.streak = res.data;
+				} catch (error) {
+					console.error("打卡失败:", error);
+				}
 
 				// 3秒后隐藏
 				setTimeout(() => {
@@ -1640,5 +1834,128 @@
 		font-size: $font-size-sm;
 		color: $color-text-tertiary;
 		padding: 12rpx 24rpx;
+	}
+
+	/* ==================== 登录遮罩 ==================== */
+	.login-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2000;
+	}
+
+	.login-content {
+		width: 80%;
+		text-align: center;
+		padding: 48rpx 32rpx;
+	}
+
+	.login-illustration {
+		margin-bottom: 40rpx;
+	}
+
+	.login-plate {
+		width: 160rpx;
+		height: 160rpx;
+		margin: 0 auto;
+		border: 8rpx solid $color-primary;
+		border-radius: 50%;
+		position: relative;
+		animation: login-pulse 2s ease-in-out infinite;
+	}
+
+	.login-plate::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 60%;
+		height: 60%;
+		border: 4rpx solid $color-primary;
+		border-radius: 50%;
+		opacity: 0.5;
+	}
+
+	@keyframes login-pulse {
+
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+
+		50% {
+			transform: scale(1.05);
+			opacity: 0.8;
+		}
+	}
+
+	.login-title {
+		font-size: $font-size-2xl;
+		font-weight: $font-weight-bold;
+		color: $color-text-primary;
+		display: block;
+		margin-bottom: 16rpx;
+	}
+
+	.login-desc {
+		font-size: $font-size-base;
+		color: $color-text-secondary;
+		display: block;
+		margin-bottom: 40rpx;
+	}
+
+	.login-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 28rpx 80rpx;
+		background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+		border-radius: 48rpx;
+		box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+		transition: all 0.2s;
+	}
+
+	.login-btn:active {
+		transform: scale(0.95);
+		box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.3);
+	}
+
+	.login-btn-text {
+		font-size: $font-size-md;
+		font-weight: $font-weight-semibold;
+		color: #ffffff;
+	}
+
+	.login-loading {
+		display: flex;
+		justify-content: center;
+		padding: 20rpx 0;
+	}
+
+	.loading-spinner {
+		width: 48rpx;
+		height: 48rpx;
+		border: 4rpx solid $color-bg-tertiary;
+		border-top-color: $color-primary;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 </style>

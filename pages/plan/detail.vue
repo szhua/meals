@@ -192,8 +192,8 @@
             <view class="modal-dish-info">
               <text class="dish-name">{{ dish.name }}</text>
               <view class="modal-dish-meta">
-                <text class="modal-dish-category" v-if="dish.category">{{
-                  getCategoryName(dish.category)
+                <text class="modal-dish-category" v-if="dish.categoryId">{{
+                  getCategoryName(dish.categoryId)
                 }}</text>
                 <text class="modal-dish-calorie" v-if="dish.calories"
                   >{{ dish.calories }} kcal</text
@@ -244,10 +244,10 @@
             mode="aspectFill"
           />
           <view class="detail-info">
-            <view class="info-row" v-if="detailDish?.category">
+            <view class="info-row" v-if="detailDish?.categoryId">
               <text class="info-label">分类</text>
               <text class="info-value">{{
-                getCategoryName(detailDish.category)
+                getCategoryName(detailDish.categoryId)
               }}</text>
             </view>
             <view class="info-row" v-if="detailDish?.calories">
@@ -274,7 +274,42 @@
 </template>
 
 <script>
-import store from "@/utils/store.js";
+import api from "@/api/index.js";
+
+// 格式化日期
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// 获取日期范围
+function getDateRange(startDate, endDate) {
+  const dates = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  while (start <= end) {
+    dates.push(formatDate(new Date(start)));
+    start.setDate(start.getDate() + 1);
+  }
+  return dates;
+}
+
+// 计算营养
+function calculateDayNutrition(dishes, dishIds) {
+  const result = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+  for (const dishId of dishIds) {
+    const dish = dishes.find(d => d.id === dishId);
+    if (dish) {
+      result.calories += dish.calories || 0;
+      result.protein += dish.protein || 0;
+      result.carbs += dish.carbs || 0;
+      result.fat += dish.fat || 0;
+    }
+  }
+  return result;
+}
 
 export default {
   data() {
@@ -300,7 +335,7 @@ export default {
   computed: {
     days() {
       if (!this.plan.startDate || !this.plan.endDate) return [];
-      const dates = store.getDateRange(this.plan.startDate, this.plan.endDate);
+      const dates = getDateRange(this.plan.startDate, this.plan.endDate);
       return dates.map((date) => ({
         date,
         meals: this.plan.days[date] || { breakfast: [], lunch: [], dinner: [] },
@@ -324,17 +359,40 @@ export default {
       return 580;
     },
   },
-  onLoad(options) {
+  async onLoad(options) {
     this.planId = options.id;
-    this.loadPlan();
-    this.dishes = store.getDishes();
-    this.categories = store.getCategories();
+    await this.loadPlan();
+    await this.loadDishes();
+    await this.loadCategories();
   },
   methods: {
-    loadPlan() {
-      const plan = store.getPlan(this.planId);
-      if (plan) {
-        this.plan = plan;
+    async loadPlan() {
+      try {
+        const res = await api.getPlan(this.planId);
+        if (res.data) {
+          this.plan = res.data;
+        }
+      } catch (error) {
+        console.error("加载规划失败:", error);
+        uni.showToast({ title: "加载失败", icon: "none" });
+      }
+    },
+    async loadDishes() {
+      try {
+        const res = await api.getDishes();
+        this.dishes = res.data.list || [];
+      } catch (error) {
+        console.error("加载菜品失败:", error);
+        this.dishes = [];
+      }
+    },
+    async loadCategories() {
+      try {
+        const res = await api.getCategories();
+        this.categories = res.data || [];
+      } catch (error) {
+        console.error("加载分类失败:", error);
+        this.categories = [];
       }
     },
     formatDay(date) {
@@ -342,13 +400,13 @@ export default {
       return `${d.getMonth() + 1}/${d.getDate()}`;
     },
     getWeekDay(date) {
-      const today = store.formatDate(new Date());
+      const today = formatDate(new Date());
       if (date === today) return "今天";
       const weekDays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
       return weekDays[new Date(date).getDay()];
     },
     isToday(date) {
-      return date === store.formatDate(new Date());
+      return date === formatDate(new Date());
     },
     getDishName(id) {
       const dish = this.dishes.find((d) => d.id === id);
@@ -366,7 +424,7 @@ export default {
       const meals = this.plan.days[date];
       if (!meals) return 0;
       const allDishes = [...meals.breakfast, ...meals.lunch, ...meals.dinner];
-      return store.calculateDayNutrition(allDishes).calories;
+      return calculateDayNutrition(this.dishes, allDishes).calories;
     },
     addDish(date, meal) {
       this.currentDate = date;
@@ -388,11 +446,11 @@ export default {
       this.showDetailModal = false;
       this.detailDish = null;
     },
-    selectDish(dishId) {
+    async selectDish(dishId) {
       // 显示添加动画
       this.addingDishId = dishId;
 
-      setTimeout(() => {
+      setTimeout(async () => {
         if (!this.plan.days[this.currentDate]) {
           this.plan.days[this.currentDate] = {
             breakfast: [],
@@ -404,7 +462,14 @@ export default {
           !this.plan.days[this.currentDate][this.currentMeal].includes(dishId)
         ) {
           this.plan.days[this.currentDate][this.currentMeal].push(dishId);
-          store.updatePlan(this.planId, { days: this.plan.days });
+          try {
+            await api.updatePlan(this.planId, { days: this.plan.days });
+          } catch (error) {
+            console.error("更新规划失败:", error);
+            uni.showToast({ title: "添加失败", icon: "none" });
+            this.addingDishId = "";
+            return;
+          }
         }
 
         // 显示成功提示
@@ -425,12 +490,17 @@ export default {
         confirmColor: "#EF4444",
         confirmText: "移除",
         cancelText: "取消",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
             const index = this.plan.days[date][meal].indexOf(dishId);
             if (index > -1) {
               this.plan.days[date][meal].splice(index, 1);
-              store.updatePlan(this.planId, { days: this.plan.days });
+              try {
+                await api.updatePlan(this.planId, { days: this.plan.days });
+              } catch (error) {
+                console.error("更新规划失败:", error);
+                uni.showToast({ title: "移除失败", icon: "none" });
+              }
             }
           }
         },

@@ -157,7 +157,7 @@
 </template>
 
 <script>
-import store from "@/utils/store.js";
+import api from "@/api/index.js";
 
 // 根据菜品名称匹配默认图片
 function getDefaultImage(dishName) {
@@ -188,13 +188,13 @@ export default {
   data() {
     return {
       isEdit: false,
-      dishId: "",
+      dishId: null,
       categories: [],
       categoryIndex: 0,
       form: {
         name: "",
         image: "",
-        category: "",
+        categoryId: null,
         calories: "",
         protein: "",
         carbs: "",
@@ -203,34 +203,67 @@ export default {
       },
     };
   },
-  onLoad(options) {
-    this.categories = [{ id: "", name: "未分类" }, ...store.getCategories()];
+  async onLoad(options) {
+    await this.loadCategories();
     if (options.id) {
       this.isEdit = true;
       this.dishId = options.id;
-      this.loadDish();
+      await this.loadDish();
+    } else {
+      // 新增菜品时设置默认值
+      this.setDefaultsForNewDish();
     }
   },
   methods: {
-    loadDish() {
-      const dish = store.getDish(this.dishId);
-      if (dish) {
-        this.form = {
-          name: dish.name || "",
-          image: dish.image || "",
-          category: dish.category || "",
-          calories: dish.calories || "",
-          protein: dish.protein || "",
-          carbs: dish.carbs || "",
-          fat: dish.fat || "",
-          mealTypes: dish.mealTypes || [],
-        };
-        if (dish.category) {
-          this.categoryIndex = this.categories.findIndex(
-            (c) => c.id === dish.category,
-          );
+    async loadCategories() {
+      try {
+        const res = await api.getCategories();
+        this.categories = [{ id: null, name: "未分类" }, ...(res.data || [])];
+      } catch (error) {
+        console.error("加载分类失败:", error);
+        this.categories = [{ id: null, name: "未分类" }];
+      }
+    },
+    setDefaultsForNewDish() {
+      // 默认选择"主食"分类
+      const stapleIndex = this.categories.findIndex(c => c.name === "主食");
+      if (stapleIndex !== -1) {
+        this.categoryIndex = stapleIndex;
+        this.form.categoryId = this.categories[stapleIndex].id;
+      }
+      // 默认适合餐次：午餐、晚餐
+      this.form.mealTypes = ["lunch", "dinner"];
+      // 默认营养信息
+      this.form.calories = "200";
+      this.form.protein = "5";
+      this.form.carbs = "30";
+      this.form.fat = "5";
+    },
+    async loadDish() {
+      try {
+        const res = await api.getDish(this.dishId);
+        const dish = res.data;
+        if (dish) {
+          this.form = {
+            name: dish.name || "",
+            image: dish.image || "",
+            categoryId: dish.categoryId || null,
+            calories: dish.calories || "",
+            protein: dish.protein || "",
+            carbs: dish.carbs || "",
+            fat: dish.fat || "",
+            mealTypes: dish.mealTypes || [],
+          };
+          if (dish.categoryId) {
+            this.categoryIndex = this.categories.findIndex(
+              (c) => c.id === dish.categoryId,
+            );
+          }
+          uni.setNavigationBarTitle({ title: "编辑菜品" });
         }
-        uni.setNavigationBarTitle({ title: "编辑菜品" });
+      } catch (error) {
+        console.error("加载菜品失败:", error);
+        uni.showToast({ title: "加载失败", icon: "none" });
       }
     },
     chooseImage() {
@@ -238,14 +271,26 @@ export default {
         count: 1,
         sizeType: ["compressed"],
         sourceType: ["album", "camera"],
-        success: (res) => {
-          this.form.image = res.tempFilePaths[0];
+        success: async (res) => {
+          const tempFilePath = res.tempFilePaths[0];
+          uni.showLoading({ title: "上传中..." });
+          try {
+            const uploadRes = await api.uploadImage(tempFilePath);
+            if (uploadRes.data && uploadRes.data.url) {
+              this.form.image = uploadRes.data.url;
+            }
+            uni.hideLoading();
+          } catch (error) {
+            uni.hideLoading();
+            console.error("上传图片失败:", error);
+            uni.showToast({ title: "上传失败", icon: "none" });
+          }
         },
       });
     },
     onCategoryChange(e) {
       this.categoryIndex = e.detail.value;
-      this.form.category = this.categories[this.categoryIndex].id;
+      this.form.categoryId = this.categories[this.categoryIndex].id;
     },
     toggleMealType(type) {
       const index = this.form.mealTypes.indexOf(type);
@@ -255,18 +300,9 @@ export default {
         this.form.mealTypes.push(type);
       }
     },
-    submit() {
+    async submit() {
       if (!this.form.name.trim()) {
         return uni.showToast({ title: "请输入菜品名称", icon: "none" });
-      }
-
-      // 检查菜品名称是否重复（编辑时排除当前菜品）
-      const dishes = store.getDishes();
-      const isDuplicate = dishes.some(d =>
-        d.name.trim() === this.form.name.trim() && d.id !== this.dishId
-      );
-      if (isDuplicate) {
-        return uni.showToast({ title: "该菜品名称已存在", icon: "none" });
       }
 
       // 如果没有上传图片，根据菜品名称自动匹配默认图片
@@ -275,25 +311,38 @@ export default {
       const data = {
         name: this.form.name.trim(),
         image: dishImage,
-        category: this.form.category,
-        calories: this.form.calories ? parseFloat(this.form.calories) : 0,
-        protein: this.form.protein ? parseFloat(this.form.protein) : 0,
-        carbs: this.form.carbs ? parseFloat(this.form.carbs) : 0,
-        fat: this.form.fat ? parseFloat(this.form.fat) : 0,
+        categoryId: this.form.categoryId,
+        calories: this.form.calories ? parseInt(this.form.calories) : 0,
+        protein: this.form.protein ? parseInt(this.form.protein) : 0,
+        carbs: this.form.carbs ? parseInt(this.form.carbs) : 0,
+        fat: this.form.fat ? parseInt(this.form.fat) : 0,
         mealTypes: this.form.mealTypes,
       };
 
-      if (this.isEdit) {
-        store.updateDish(this.dishId, data);
-        uni.showToast({ title: "修改成功", icon: "success" });
-      } else {
-        store.addDish(data);
-        uni.showToast({ title: "添加成功", icon: "success" });
-      }
+      try {
+        if (this.isEdit) {
+          await api.updateDish(this.dishId, data);
+          uni.showToast({ title: "修改成功", icon: "success" });
+        } else {
+          // 检查菜品名称是否重复
+          const dishesRes = await api.getDishes();
+          const isDuplicate = dishesRes.data.list.some(
+            d => d.name.trim() === this.form.name.trim()
+          );
+          if (isDuplicate) {
+            return uni.showToast({ title: "该菜品名称已存在", icon: "none" });
+          }
+          await api.addDish(data);
+          uni.showToast({ title: "添加成功", icon: "success" });
+        }
 
-      setTimeout(() => {
-        uni.navigateBack();
-      }, 500);
+        setTimeout(() => {
+          uni.navigateBack();
+        }, 500);
+      } catch (error) {
+        console.error("保存菜品失败:", error);
+        uni.showToast({ title: "保存失败，请重试", icon: "none" });
+      }
     },
   },
 };
