@@ -68,17 +68,18 @@
             <view class="td td-meal td-breakfast">
               <view class="dish-list">
                 <view
-                  v-for="dishId in day.meals.breakfast"
-                  :key="dishId"
+                  v-for="item in getGroupedDishes(day.meals.breakfast)"
+                  :key="item.dishId"
                   class="dish-item breakfast"
-                  @tap="showDishDetail(dishId)"
+                  @tap="showDishDetail(item.dishId)"
                 >
-                  <text class="dish-name">{{ getDishName(dishId) }}</text>
+                  <text class="dish-name">{{ getDishName(item.dishId) }}</text>
+                  <text class="dish-quantity" v-if="item.quantity > 1">x{{ item.quantity }}</text>
                   <view
                     class="dish-remove"
-                    @tap.stop="removeDish(day.date, 'breakfast', dishId)"
+                    @tap.stop="removeDish(day.date, 'breakfast', item.dishId)"
                   >
-                    <text class="remove-icon">×</text>
+                    <text class="remove-icon">−</text>
                   </view>
                 </view>
                 <view
@@ -94,17 +95,18 @@
             <view class="td td-meal td-lunch">
               <view class="dish-list">
                 <view
-                  v-for="dishId in day.meals.lunch"
-                  :key="dishId"
+                  v-for="item in getGroupedDishes(day.meals.lunch)"
+                  :key="item.dishId"
                   class="dish-item lunch"
-                  @tap="showDishDetail(dishId)"
+                  @tap="showDishDetail(item.dishId)"
                 >
-                  <text class="dish-name">{{ getDishName(dishId) }}</text>
+                  <text class="dish-name">{{ getDishName(item.dishId) }}</text>
+                  <text class="dish-quantity" v-if="item.quantity > 1">x{{ item.quantity }}</text>
                   <view
                     class="dish-remove"
-                    @tap.stop="removeDish(day.date, 'lunch', dishId)"
+                    @tap.stop="removeDish(day.date, 'lunch', item.dishId)"
                   >
-                    <text class="remove-icon">×</text>
+                    <text class="remove-icon">−</text>
                   </view>
                 </view>
                 <view class="add-dish-btn" @tap="addDish(day.date, 'lunch')">
@@ -117,17 +119,18 @@
             <view class="td td-meal td-dinner">
               <view class="dish-list">
                 <view
-                  v-for="dishId in day.meals.dinner"
-                  :key="dishId"
+                  v-for="item in getGroupedDishes(day.meals.dinner)"
+                  :key="item.dishId"
                   class="dish-item dinner"
-                  @tap="showDishDetail(dishId)"
+                  @tap="showDishDetail(item.dishId)"
                 >
-                  <text class="dish-name">{{ getDishName(dishId) }}</text>
+                  <text class="dish-name">{{ getDishName(item.dishId) }}</text>
+                  <text class="dish-quantity" v-if="item.quantity > 1">x{{ item.quantity }}</text>
                   <view
                     class="dish-remove"
-                    @tap.stop="removeDish(day.date, 'dinner', dishId)"
+                    @tap.stop="removeDish(day.date, 'dinner', item.dishId)"
                   >
-                    <text class="remove-icon">×</text>
+                    <text class="remove-icon">−</text>
                   </view>
                 </view>
                 <view class="add-dish-btn" @tap="addDish(day.date, 'dinner')">
@@ -469,6 +472,18 @@ export default {
       const allDishes = [...meals.breakfast, ...meals.lunch, ...meals.dinner];
       return calculateDayNutrition(this.dishes, allDishes).calories;
     },
+    // 获取分组后的菜品列表（带数量）
+    getGroupedDishes(dishIds) {
+      const grouped = {};
+      dishIds.forEach((id) => {
+        if (grouped[id]) {
+          grouped[id].quantity++;
+        } else {
+          grouped[id] = { dishId: id, quantity: 1 };
+        }
+      });
+      return Object.values(grouped);
+    },
     async addDish(date, meal) {
       this.currentDate = date;
       this.currentMeal = meal;
@@ -513,19 +528,18 @@ export default {
             dinner: [],
           };
         }
-        if (
-          !this.plan.days[this.currentDate][this.currentMeal].includes(dishId)
-        ) {
-          this.plan.days[this.currentDate][this.currentMeal].push(dishId);
-          try {
-            await api.updatePlan(this.planId, { days: this.plan.days });
-            // 后端会自动扣减冰箱库存
-          } catch (error) {
-            console.error("更新规划失败:", error);
-            uni.showToast({ title: "添加失败", icon: "none" });
-            this.addingDishId = "";
-            return;
-          }
+        // 允许重复添加同一菜品
+        this.plan.days[this.currentDate][this.currentMeal].push(dishId);
+        try {
+          await api.updatePlan(this.planId, { days: this.plan.days });
+          // 后端会自动扣减冰箱库存
+          // 重新加载冰箱数据更新库存显示
+          await this.loadFridge();
+        } catch (error) {
+          console.error("更新规划失败:", error);
+          uni.showToast({ title: "添加失败", icon: "none" });
+          this.addingDishId = "";
+          return;
         }
 
         // 显示成功提示
@@ -540,11 +554,15 @@ export default {
       }, 200);
     },
     removeDish(date, meal, dishId) {
+      const dishIds = this.plan.days[date][meal];
+      const quantity = dishIds.filter((id) => id === dishId).length;
+      const dishName = this.getDishName(dishId);
+
       uni.showModal({
-        title: "移除菜品",
-        content: `确定要移除「${this.getDishName(dishId)}」吗？\n移除后可以重新添加。`,
+        title: "减少数量",
+        content: `确定要减少「${dishName}」1份吗？${quantity > 1 ? `\n当前数量: ${quantity}份` : ""}`,
         confirmColor: "#EF4444",
-        confirmText: "移除",
+        confirmText: "减少",
         cancelText: "取消",
         success: async (res) => {
           if (res.confirm) {
@@ -897,7 +915,14 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 24rpx;
+  padding-right: 8rpx;
+}
+
+.dish-quantity {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+  margin-right: 24rpx;
 }
 
 .dish-remove {
