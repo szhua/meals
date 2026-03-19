@@ -250,13 +250,6 @@
             <text class="empty-text">未找到匹配的菜品</text>
           </view>
         </scroll-view>
-
-        <!-- 底部关闭按钮 -->
-        <view class="modal-footer">
-          <view class="modal-close-btn" @tap="closeAddModal">
-            <text class="close-btn-text">关闭</text>
-          </view>
-        </view>
       </view>
     </view>
 
