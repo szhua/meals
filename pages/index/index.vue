@@ -30,14 +30,20 @@
 							<text class="greeting-main">{{ greeting.text }}<text
 									v-if="userInfo?.nickname">，{{ userInfo.nickname }}</text></text>
 						</view>
-						<!-- 连续打卡徽章 -->
-						<view class="streak-badge" v-if="streak.current > 0" @tap="showStreakDetail">
-							<view class="streak-fire">
-								<view class="flame flame-1"></view>
-								<view class="flame flame-2"></view>
+						<view class="header-actions">
+							<!-- 分享按钮 -->
+							<view class="share-btn" @tap="handleShare">
+								<icon-park name="share" size="36" />
 							</view>
-							<text class="streak-count">{{ streak.current }}</text>
-							<text class="streak-label">天</text>
+							<!-- 连续打卡徽章 -->
+							<view class="streak-badge" v-if="streak.current > 0" @tap="showStreakDetail">
+								<view class="streak-fire">
+									<view class="flame flame-1"></view>
+									<view class="flame flame-2"></view>
+								</view>
+								<text class="streak-count">{{ streak.current }}</text>
+								<text class="streak-label">天</text>
+							</view>
 						</view>
 					</view>
 					<text class="welcome-subtitle">{{ greeting.message }}</text>
@@ -425,6 +431,19 @@
 		onShow() {
 			this.checkLoginState();
 		},
+		// 分享功能
+		onShareAppMessage() {
+			return {
+				title: '三餐记食 - 健康饮食规划助手',
+				path: '/pages/index/index'
+			};
+		},
+		// 分享到朋友圈
+		onShareTimeline() {
+			return {
+				title: '三餐记食 - 健康饮食规划助手'
+			};
+		},
 		watch: {
 			isAllMealsComplete(val) {
 				if (val && !this.hasShownCelebration) {
@@ -655,6 +674,25 @@
 				// 目前数据都在 onShow 中加载，这里可以留空或添加额外处理
 				this.$refs.paging.complete([1]);
 			},
+			// 分享小程序
+			handleShare() {
+				// #ifdef MP-WEIXIN
+				// 微信小程序使用 button 组件触发分享
+				// 这里提示用户使用右上角分享
+				uni.showToast({
+					title: '点击右上角分享给好友',
+					icon: 'none',
+					duration: 2000
+				});
+				// #endif
+
+				// #ifndef MP-WEIXIN
+				uni.showToast({
+					title: '请在微信小程序中使用',
+					icon: 'none'
+				});
+				// #endif
+			},
 		},
 	};
 </script>
@@ -685,6 +723,30 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: $spacing-sm;
+	}
+
+	.share-btn {
+		width: 64rpx;
+		height: 64rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: $color-bg-primary;
+		border-radius: 50%;
+		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+		transition: all 0.2s;
+		color: $color-text-secondary;
+	}
+
+	.share-btn:active {
+		transform: scale(0.9);
+		background: $color-bg-tertiary;
 	}
 
 	.greeting-text {
