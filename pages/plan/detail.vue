@@ -188,8 +188,8 @@
             v-for="item in filteredFridgeItems"
             :key="item.id"
             class="modal-fridge-item"
-            :class="{ adding: addingDishId === item.dishId, 'low-stock': item.quantity <= 1 }"
-            @tap="selectDish(item.dishId, item)"
+            :class="{ adding: addingDishId === item.dishId, 'low-stock': item.quantity <= 1, 'no-stock': item.quantity === 0 }"
+            @tap="item.quantity > 0 && selectDish(item.dishId, item)"
           >
             <image
               v-if="item.dishImage"
@@ -203,7 +203,7 @@
             <view class="modal-dish-info">
               <text class="dish-name">{{ item.dishName }}</text>
               <view class="modal-dish-meta">
-                <text class="modal-dish-stock" :class="{ 'low-stock-text': item.quantity <= 1 }">
+                <text class="modal-dish-stock" :class="{ 'low-stock-text': item.quantity <= 1, 'no-stock-text': item.quantity === 0 }">
                   库存: {{ item.quantity }} {{ item.unit || '份' }}
                 </text>
                 <text class="modal-dish-calorie" v-if="getDishCalories(item.dishId)"
@@ -211,12 +211,15 @@
                 >
               </view>
             </view>
-            <view class="modal-dish-add-btn">
+            <view class="modal-dish-add-btn" v-if="item.quantity > 0">
               <view
                 v-if="addingDishId === item.dishId"
                 class="adding-spinner"
               ></view>
               <text v-else class="add-text">添加</text>
+            </view>
+            <view class="no-stock-label" v-else>
+              <text class="no-stock-label-text">无库存</text>
             </view>
           </view>
 
@@ -353,10 +356,20 @@ export default {
       }));
     },
     filteredFridgeItems() {
-      if (!this.searchKeyword) return this.fridgeItems;
-      return this.fridgeItems.filter((item) =>
-        item.dishName.includes(this.searchKeyword)
-      );
+      let result = this.fridgeItems;
+      if (this.searchKeyword) {
+        result = result.filter((item) =>
+          item.dishName.includes(this.searchKeyword)
+        );
+      }
+      // 数量为0的排在后面
+      return [...result].sort((a, b) => {
+        const aQty = a.quantity || 0;
+        const bQty = b.quantity || 0;
+        if (aQty === 0 && bQty !== 0) return 1;
+        if (aQty !== 0 && bQty === 0) return -1;
+        return 0;
+      });
     },
     arrangedCount() {
       let count = 0;
@@ -484,7 +497,7 @@ export default {
     },
     async selectDish(dishId, fridgeItem) {
       // 检查库存
-      if (fridgeItem.quantity < 1) {
+      if (!fridgeItem || fridgeItem.quantity < 1) {
         uni.showToast({ title: "库存不足", icon: "none" });
         return;
       }
@@ -1207,6 +1220,11 @@ export default {
   background: rgba(245, 158, 11, 0.15);
 }
 
+.modal-fridge-item.no-stock {
+  opacity: 0.5;
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .modal-dish-stock {
   font-size: 20rpx;
   color: $color-success;
@@ -1215,6 +1233,23 @@ export default {
 
 .modal-dish-stock.low-stock-text {
   color: $color-warning;
+}
+
+.modal-dish-stock.no-stock-text {
+  color: $color-text-tertiary;
+}
+
+.no-stock-label {
+  padding: 6rpx 16rpx;
+  background: $color-bg-tertiary;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+  margin-right: 23rpx;
+}
+
+.no-stock-label-text {
+  font-size: 22rpx;
+  color: $color-text-tertiary;
 }
 
 /* ==================== 添加动画 ==================== */
