@@ -8,6 +8,13 @@
 			}
 		},
 		{
+			"path": "pages/fridge/index",
+			"style": {
+				"navigationBarTitleText": "我的冰箱",
+				"navigationStyle": "default"
+			}
+		},
+		{
 			"path": "pages/dishes/list",
 			"style": {
 				"navigationBarTitleText": "菜品管理",

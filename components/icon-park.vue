@@ -23,6 +23,7 @@ import {
   CameraOne,
   Chicken,
   Info,
+  Refrigerator,
   BowlOne,
   AvocadoOne,
   Vegetables,
@@ -38,6 +39,7 @@ const defaultColorMap = {
   dinner: "#8B5CF6",
   fire: "#EF4444",
   dish: "#35a75a",
+  refrigerator: "#859aa4",
   calendar: "#22C55E",
   search: "#6B7280",
   camera: "#6B7280",
@@ -54,6 +56,7 @@ const defaultColorMap = {
 // 图标映射
 const iconMap = {
   breakfast: SunOne,
+  refrigerator: Refrigerator,
   lunch: Sun,
   dinner: Moon,
   fire: Fire,

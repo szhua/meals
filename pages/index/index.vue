@@ -169,6 +169,13 @@
 				<view class="quick-section">
 					<text class="section-title">快捷功能</text>
 					<view class="quick-grid">
+						<view class="quick-item" @tap="goToFridge">
+							<view class="quick-icon-wrap fridge">
+								<icon-park name="refrigerator" size="40" />
+							</view>
+							<text class="quick-name">我的冰箱</text>
+							<text class="quick-count">{{ fridgeCount }} 种</text>
+						</view>
 						<view class="quick-item" @tap="goToDishes">
 							<view class="quick-icon-wrap">
 								<icon-park name="dish" size="40" />
@@ -180,7 +187,6 @@
 							<view class="quick-icon-wrap add">
 								<icon-park name="add" size="40" />
 							</view>
-
 							<text class="quick-name">新建规划</text>
 							<text class="quick-desc">安排饮食</text>
 						</view>
@@ -341,6 +347,7 @@
 				todayPlan: null,
 				dishes: [],
 				plans: [],
+				fridgeItems: [],
 				streak: {
 					current: 0,
 					longest: 0,
@@ -405,6 +412,9 @@
 			},
 			planCount() {
 				return this.plans.length;
+			},
+			fridgeCount() {
+				return this.fridgeItems.length;
 			},
 			progressPercent() {
 				let complete = 0;
@@ -532,16 +542,18 @@
 			async loadData() {
 				try {
 					// 并行请求所有数据
-					const [todayPlanRes, dishesRes, plansRes, streakRes] = await Promise.all([
+					const [todayPlanRes, dishesRes, plansRes, streakRes, fridgeRes] = await Promise.all([
 						api.getTodayPlan(),
 						api.getDishes(),
 						api.getPlans(),
 						api.getStreak(),
+						api.getFridge(),
 					]);
 
 					this.todayPlan = todayPlanRes.data;
 					this.dishes = dishesRes.data.list || [];
 					this.plans = plansRes.data.list || [];
+					this.fridgeItems = fridgeRes.data || [];
 					this.streak = streakRes.data || {
 						current: 0,
 						longest: 0,
@@ -608,6 +620,11 @@
 			goToDishes() {
 				uni.navigateTo({
 					url: "/pages/dishes/list",
+				});
+			},
+			goToFridge() {
+				uni.navigateTo({
+					url: "/pages/fridge/index",
 				});
 			},
 			goToHistory() {
@@ -704,6 +721,7 @@
 		height: 100vh;
 		display: flex;
 		flex-direction: column;
+		padding-top: 30px;
 
 	}
 
@@ -1289,6 +1307,11 @@
 		align-items: center;
 		justify-content: center;
 		color: #22c55e;
+	}
+
+	.quick-icon-wrap.fridge {
+		background: #EFF6FF;
+		color: #3B82F6;
 	}
 
 	.quick-icon-wrap.add {

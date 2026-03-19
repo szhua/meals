@@ -16,11 +16,11 @@ const config = {
 
 	// API 基础地址
 	baseURL: 'http://localhost:8080/api',
-	baseURL: 'https://slywfw.com:6690/sancanjishi-api/api',
+	// baseURL: 'https://slywfw.com:6690/sancanjishi-api/api',
 
 	// 图片基础地址（可动态修改）
 	baseImageUrl: 'http://localhost:8080',
-	baseImageUrl: 'https://slywfw.com:6690/sancanjishi-api/',
+	// baseImageUrl: 'https://slywfw.com:6690/sancanjishi-api/',
 	// 请求超时时间
 	timeout: 30000
 }
@@ -696,6 +696,62 @@ const api = {
 			method: 'PUT',
 			data: userInfo
 		})
+	},
+
+	// ==================== 冰箱 ====================
+
+	/**
+	 * 获取冰箱列表
+	 */
+	getFridge() {
+		return request('/fridge')
+	},
+
+	/**
+	 * 添加菜品到冰箱
+	 * @param {Object} data
+	 * @param {number} data.dishId - 菜品ID
+	 * @param {number} data.quantity - 数量
+	 * @param {string} data.unit - 单位（可选）
+	 * @param {string} data.expiryDate - 过期日期（可选）
+	 */
+	addToFridge(data) {
+		return request('/fridge', {
+			method: 'POST',
+			data
+		})
+	},
+
+	/**
+	 * 更新冰箱中的菜品
+	 * @param {number} id - 冰箱项目ID
+	 * @param {Object} data
+	 * @param {number} data.quantity - 数量
+	 * @param {string} data.expiryDate - 过期日期（可选）
+	 */
+	updateFridgeItem(id, data) {
+		return request(`/fridge/${id}`, {
+			method: 'PUT',
+			data
+		})
+	},
+
+	/**
+	 * 从冰箱移除菜品
+	 * @param {number} id - 冰箱项目ID
+	 */
+	removeFromFridge(id) {
+		return request(`/fridge/${id}`, {
+			method: 'DELETE'
+		})
+	},
+
+	/**
+	 * 检查菜品库存
+	 * @param {number} dishId - 菜品ID
+	 */
+	checkFridgeStock(dishId) {
+		return request(`/fridge/stock/${dishId}`)
 	},
 
 	// ==================== 文件上传 ====================

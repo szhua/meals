@@ -156,15 +156,26 @@
         </view>
 
         <view class="modal-search-wrap">
-          <icon name="search" size="28" />
+          <icon-park name="search" size="28" />
           <input
             class="modal-search"
             v-model="searchKeyword"
-            placeholder="搜索菜品名称"
+            placeholder="搜索冰箱食材"
           />
         </view>
 
+        <!-- 冰箱提示 -->
+        <view class="fridge-tip" v-if="fridgeItems.length === 0">
+          <icon-park name="fridge" size="48" />
+          <text class="tip-text">冰箱空空如也</text>
+          <text class="tip-hint">请先从菜品列表添加食材到冰箱</text>
+          <view class="tip-btn" @tap="goToFridge">
+            <text class="tip-btn-text">去添加食材</text>
+          </view>
+        </view>
+
         <scroll-view
+          v-else
           class="modal-list"
           scroll-y
           :scroll-with-animation="true"
@@ -174,45 +185,44 @@
           scroll-anchoring
         >
           <view
-            v-for="dish in filteredDishes"
-            :key="dish.id"
-            class="modal-dish-item"
-            :class="{ adding: addingDishId === dish.id }"
-            @tap="selectDish(dish.id)"
+            v-for="item in filteredFridgeItems"
+            :key="item.id"
+            class="modal-fridge-item"
+            :class="{ adding: addingDishId === item.dishId, 'low-stock': item.quantity <= 1 }"
+            @tap="selectDish(item.dishId, item)"
           >
             <image
-              v-if="dish.image"
+              v-if="item.dishImage"
               class="modal-dish-img"
-              :src="dish.image"
+              :src="item.dishImage"
               mode="aspectFill"
             />
             <view v-else class="modal-dish-img dish-img-placeholder">
-              <icon name="dish" size="24" />
+              <icon-park name="dish" size="24" />
             </view>
             <view class="modal-dish-info">
-              <text class="dish-name">{{ dish.name }}</text>
+              <text class="dish-name">{{ item.dishName }}</text>
               <view class="modal-dish-meta">
-                <text class="modal-dish-category" v-if="dish.categoryId">{{
-                  getCategoryName(dish.categoryId)
-                }}</text>
-                <text class="modal-dish-calorie" v-if="dish.calories"
-                  >{{ dish.calories }} kcal</text
+                <text class="modal-dish-stock" :class="{ 'low-stock-text': item.quantity <= 1 }">
+                  库存: {{ item.quantity }} {{ item.unit || '份' }}
+                </text>
+                <text class="modal-dish-calorie" v-if="getDishCalories(item.dishId)"
+                  >{{ getDishCalories(item.dishId) }} kcal</text
                 >
               </view>
             </view>
             <view class="modal-dish-add-btn">
               <view
-                v-if="addingDishId === dish.id"
+                v-if="addingDishId === item.dishId"
                 class="adding-spinner"
               ></view>
               <text v-else class="add-text">添加</text>
             </view>
           </view>
 
-          <view v-if="filteredDishes.length === 0" class="modal-empty">
-            <icon name="dish" size="64" />
-            <text class="empty-text">菜品库空空如也</text>
-            <text class="empty-hint">先去「菜品」页面添加一些菜品吧</text>
+          <view v-if="filteredFridgeItems.length === 0 && fridgeItems.length > 0" class="modal-empty">
+            <icon-park name="search" size="48" />
+            <text class="empty-text">未找到匹配的食材</text>
           </view>
         </scroll-view>
       </view>
@@ -322,6 +332,7 @@ export default {
       },
       dishes: [],
       categories: [],
+      fridgeItems: [], // 冰箱食材
       showDishModal: false,
       currentDate: "",
       currentMeal: "",
@@ -341,9 +352,11 @@ export default {
         meals: this.plan.days[date] || { breakfast: [], lunch: [], dinner: [] },
       }));
     },
-    filteredDishes() {
-      if (!this.searchKeyword) return this.dishes;
-      return this.dishes.filter((d) => d.name.includes(this.searchKeyword));
+    filteredFridgeItems() {
+      if (!this.searchKeyword) return this.fridgeItems;
+      return this.fridgeItems.filter((item) =>
+        item.dishName.includes(this.searchKeyword)
+      );
     },
     arrangedCount() {
       let count = 0;
@@ -364,6 +377,10 @@ export default {
     await this.loadPlan();
     await this.loadDishes();
     await this.loadCategories();
+  },
+  onShow() {
+    // 每次显示页面时重新加载冰箱数据，确保库存最新
+    this.loadFridge();
   },
   methods: {
     async loadPlan() {
@@ -395,6 +412,15 @@ export default {
         this.categories = [];
       }
     },
+    async loadFridge() {
+      try {
+        const res = await api.getFridge();
+        this.fridgeItems = res.data || [];
+      } catch (error) {
+        console.error("加载冰箱失败:", error);
+        this.fridgeItems = [];
+      }
+    },
     formatDay(date) {
       const d = new Date(date);
       return `${d.getMonth() + 1}/${d.getDate()}`;
@@ -420,20 +446,30 @@ export default {
       const map = { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" };
       return map[meal] || "";
     },
+    getDishCalories(dishId) {
+      const dish = this.dishes.find((d) => d.id === dishId);
+      return dish ? dish.calories : null;
+    },
     getDayCalories(date) {
       const meals = this.plan.days[date];
       if (!meals) return 0;
       const allDishes = [...meals.breakfast, ...meals.lunch, ...meals.dinner];
       return calculateDayNutrition(this.dishes, allDishes).calories;
     },
-    addDish(date, meal) {
+    async addDish(date, meal) {
       this.currentDate = date;
       this.currentMeal = meal;
       this.searchKeyword = "";
+      // 每次打开弹窗时重新加载冰箱数据
+      await this.loadFridge();
       this.showDishModal = true;
     },
     closeModal() {
       this.showDishModal = false;
+    },
+    goToFridge() {
+      this.showDishModal = false;
+      uni.navigateTo({ url: "/pages/fridge/index" });
     },
     showDishDetail(dishId) {
       const dish = this.dishes.find((d) => d.id === dishId);
@@ -446,7 +482,13 @@ export default {
       this.showDetailModal = false;
       this.detailDish = null;
     },
-    async selectDish(dishId) {
+    async selectDish(dishId, fridgeItem) {
+      // 检查库存
+      if (fridgeItem.quantity < 1) {
+        uni.showToast({ title: "库存不足", icon: "none" });
+        return;
+      }
+
       // 显示添加动画
       this.addingDishId = dishId;
 
@@ -464,6 +506,7 @@ export default {
           this.plan.days[this.currentDate][this.currentMeal].push(dishId);
           try {
             await api.updatePlan(this.planId, { days: this.plan.days });
+            // 后端会自动扣减冰箱库存
           } catch (error) {
             console.error("更新规划失败:", error);
             uni.showToast({ title: "添加失败", icon: "none" });
@@ -1103,6 +1146,75 @@ export default {
 .empty-hint {
   font-size: $font-size-sm;
   color: $color-text-tertiary;
+}
+
+/* 冰箱空状态提示 */
+.fridge-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 32rpx;
+  color: $color-text-tertiary;
+}
+
+.tip-text {
+  font-size: $font-size-base;
+  color: $color-text-secondary;
+  margin-top: $spacing-md;
+}
+
+.tip-hint {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+  margin-bottom: $spacing-lg;
+}
+
+.tip-btn {
+  padding: $spacing-sm $spacing-xl;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  border-radius: $radius-full;
+}
+
+.tip-btn-text {
+  font-size: $font-size-sm;
+  color: $color-bg-primary;
+}
+
+/* 冰箱食材项样式 */
+.modal-fridge-item {
+  display: flex;
+  align-items: center;
+  padding: 12rpx;
+  background: $color-bg-secondary;
+  border-radius: $radius-sm;
+  margin-bottom: 8rpx;
+  min-height: 60rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-fridge-item:active {
+  background: $color-bg-tertiary;
+}
+
+.modal-fridge-item.low-stock {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1rpx solid rgba(245, 158, 11, 0.2);
+}
+
+.modal-fridge-item.low-stock:active {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.modal-dish-stock {
+  font-size: 20rpx;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.modal-dish-stock.low-stock-text {
+  color: $color-warning;
 }
 
 /* ==================== 添加动画 ==================== */

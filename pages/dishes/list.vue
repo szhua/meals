@@ -107,15 +107,9 @@
         v-for="dish in filteredDishes"
         :key="dish.id"
         class="dish-card"
-        @tap="editDish(dish.id)"
       >
-        <!-- 删除按钮 -->
-        <view class="delete-btn" @tap.stop="confirmDelete(dish)">
-          <icon-park name="delete" size="22" />
-        </view>
-
         <!-- 图片 -->
-        <view class="dish-image-wrap">
+        <view class="dish-image-wrap" @tap="editDish(dish.id)">
           <image
             v-if="dish.image"
             class="dish-image"
@@ -128,7 +122,7 @@
         </view>
 
         <!-- 信息 -->
-        <view class="dish-content">
+        <view class="dish-content" @tap="editDish(dish.id)">
           <view class="dish-header">
             <text class="dish-name">{{ dish.name }}</text>
             <view class="dish-category-tag" v-if="dish.categoryId">
@@ -170,12 +164,95 @@
             </view>
           </view>
         </view>
+
+        <!-- 操作按钮区域 - 右下角 -->
+        <view class="card-actions" v-if="!isInFridge(dish.id)">
+          <view class="action-btn add-fridge" @tap.stop="showAddToFridge(dish)">
+            <icon-park name="refrigerator" size="16" />
+            <text class="action-text">入冰箱</text>
+          </view>
+        </view>
+
+        <!-- 删除按钮 - 右上角 -->
+        <view class="delete-btn" @tap.stop="confirmDelete(dish)">
+          <icon-park name="delete" size="16" />
+        </view>
       </view>
     </z-paging>
 
     <!-- 添加按钮 -->
     <view class="fab-button" @tap="addDish">
       <text class="fab-icon">+</text>
+    </view>
+
+    <!-- 添加到冰箱弹窗 -->
+    <view class="modal-overlay" v-if="showFridgeModal" @tap="closeFridgeModal">
+      <view class="modal-content" @tap.stop>
+        <view class="modal-header">
+          <text class="modal-title">添加到冰箱</text>
+          <view class="modal-close" @tap="closeFridgeModal">
+            <icon-park name="close" size="24" />
+          </view>
+        </view>
+        <view class="modal-body">
+          <view class="dish-preview" v-if="selectedDish">
+            <image
+              v-if="selectedDish.image"
+              class="preview-image"
+              :src="selectedDish.image"
+              mode="aspectFill"
+            />
+            <view v-else class="preview-image preview-placeholder">
+              <icon-park name="dish" size="32" />
+            </view>
+            <text class="preview-name">{{ selectedDish.name }}</text>
+          </view>
+
+          <view class="form-item">
+            <text class="form-label">数量</text>
+            <view class="quantity-input">
+              <view class="qty-btn" @tap="decreaseQty">
+                <text class="qty-text">-</text>
+              </view>
+              <input
+                class="qty-value"
+                type="number"
+                v-model="fridgeForm.quantity"
+              />
+              <view class="qty-btn" @tap="increaseQty">
+                <text class="qty-text">+</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="form-item">
+            <text class="form-label">过期日期（可选）</text>
+            <picker
+              mode="date"
+              :value="fridgeForm.expiryDate"
+              @change="onExpiryDateChange"
+            >
+              <view class="date-picker">
+                <text class="date-value" v-if="fridgeForm.expiryDate">
+                  {{ fridgeForm.expiryDate }}
+                </text>
+                <text class="date-placeholder" v-else>
+                  点击选择过期日期
+                </text>
+                <icon-park name="calendar" size="20" />
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="modal-footer">
+          <view class="modal-btn cancel" @tap="closeFridgeModal">
+            <text class="btn-text">取消</text>
+          </view>
+          <view class="modal-btn confirm" @tap="confirmAddToFridge">
+            <text class="btn-text">确认添加</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -194,7 +271,14 @@ export default {
       currentCategory: "",
       categories: [],
       dishes: [],
+      fridgeItems: [],
       scrollLeft: 0,
+      showFridgeModal: false,
+      selectedDish: null,
+      fridgeForm: {
+        quantity: 1,
+        expiryDate: "",
+      },
     };
   },
   computed: {
@@ -225,12 +309,14 @@ export default {
     },
     async loadData() {
       try {
-        const [categoriesRes, dishesRes] = await Promise.all([
+        const [categoriesRes, dishesRes, fridgeRes] = await Promise.all([
           api.getCategories(),
           api.getDishes(),
+          api.getFridge(),
         ]);
         this.categories = categoriesRes.data || [];
         this.dishes = dishesRes.data.list || [];
+        this.fridgeItems = fridgeRes.data || [];
         this.$refs.paging?.complete();
       } catch (error) {
         console.error("加载数据失败:", error);
@@ -377,6 +463,57 @@ export default {
           }
         },
       });
+    },
+    // 冰箱相关方法
+    isInFridge(dishId) {
+      return this.fridgeItems.some((item) => item.dishId === dishId);
+    },
+    showAddToFridge(dish) {
+      this.selectedDish = dish;
+      this.fridgeForm = {
+        quantity: 1,
+        expiryDate: "",
+      };
+      this.showFridgeModal = true;
+    },
+    closeFridgeModal() {
+      this.showFridgeModal = false;
+      this.selectedDish = null;
+    },
+    increaseQty() {
+      this.fridgeForm.quantity++;
+    },
+    decreaseQty() {
+      if (this.fridgeForm.quantity > 1) {
+        this.fridgeForm.quantity--;
+      }
+    },
+    onExpiryDateChange(e) {
+      this.fridgeForm.expiryDate = e.detail.value;
+    },
+    async confirmAddToFridge() {
+      if (!this.selectedDish) return;
+
+      try {
+        await api.addToFridge({
+          dishId: this.selectedDish.id,
+          quantity: parseInt(this.fridgeForm.quantity) || 1,
+          unit: "份",
+          expiryDate: this.fridgeForm.expiryDate || null,
+        });
+        // 更新冰箱列表
+        this.fridgeItems.push({
+          dishId: this.selectedDish.id,
+        });
+        uni.showToast({
+          title: "已添加到冰箱",
+          icon: "success",
+        });
+        this.closeFridgeModal();
+      } catch (error) {
+        console.error("添加到冰箱失败:", error);
+        uni.showToast({ title: "添加失败", icon: "none" });
+      }
     },
   },
 };
@@ -821,13 +958,14 @@ export default {
   flex-direction: column;
   justify-content: center;
   padding-left: 12rpx;
+  padding-bottom: 8rpx;
 }
 
 .dish-header {
   display: flex;
   align-items: center;
   margin-bottom: 12rpx;
-  padding-right: 64rpx;
+  padding-right: 72rpx;
 }
 
 .dish-name {
@@ -947,30 +1085,57 @@ export default {
   color: $color-dinner;
 }
 
-/* 删除按钮 */
+/* 操作按钮区域 - 右下角 */
+.card-actions {
+  position: absolute;
+  bottom: $spacing-md;
+  right: $spacing-md;
+  z-index: 10;
+}
+
+.action-btn.add-fridge {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #3B82F6;
+  padding: 6rpx 12rpx;
+  border-radius: $radius-md;
+  border: 1rpx solid rgba(59, 130, 246, 0.2);
+  transition: all 0.2s;
+}
+
+.action-btn.add-fridge .action-text {
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}
+
+.action-btn.add-fridge:active {
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  transform: scale(0.95);
+}
+
+/* 删除按钮 - 右上角 */
 .delete-btn {
   position: absolute;
-  top: 12rpx;
-  right: 12rpx;
-  width: 48rpx;
-  height: 48rpx;
+  top: $spacing-md;
+  right: $spacing-md;
+  width: 52rpx;
+  height: 52rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: $radius-md;
   background: $color-bg-tertiary;
   color: $color-text-tertiary;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    transform 0.15s;
+  transition: all 0.15s;
   z-index: 10;
 }
 
 .delete-btn:active {
   background: rgba(239, 68, 68, 0.12);
   color: $color-error;
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
 /* ==================== 添加按钮 ==================== */
@@ -1046,5 +1211,179 @@ export default {
 
 .fab-button:active .fab-icon {
   transform: rotate(-90deg);
+}
+
+/* ==================== 添加到冰箱弹窗 ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: $z-modal-overlay;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 600rpx;
+  background: $color-bg-primary;
+  border-radius: $radius-xl;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-lg;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.modal-title {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.modal-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-tertiary;
+}
+
+.modal-body {
+  padding: $spacing-lg;
+}
+
+.dish-preview {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  background: $color-bg-secondary;
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.preview-image {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-md;
+  object-fit: cover;
+  margin-right: $spacing-md;
+}
+
+.preview-placeholder {
+  background: $color-primary-bg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-primary;
+}
+
+.preview-name {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.form-item {
+  margin-bottom: $spacing-lg;
+}
+
+.form-label {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.quantity-input {
+  display: flex;
+  align-items: center;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+}
+
+.qty-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-primary;
+  border-radius: $radius-sm;
+}
+
+.qty-text {
+  font-size: $font-size-xl;
+  color: $color-text-primary;
+}
+
+.qty-value {
+  flex: 1;
+  text-align: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: $color-bg-tertiary;
+  border-radius: $radius-md;
+}
+
+.date-value {
+  font-size: $font-size-base;
+  color: $color-text-primary;
+}
+
+.date-placeholder {
+  font-size: $font-size-base;
+  color: $color-text-placeholder;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1rpx solid $color-border;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: $spacing-lg;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.modal-btn.cancel {
+  border-right: 1rpx solid $color-border;
+}
+
+.modal-btn.cancel .btn-text {
+  color: $color-text-secondary;
+}
+
+.modal-btn.confirm {
+  background: $color-primary;
+}
+
+.modal-btn.confirm .btn-text {
+  color: $color-bg-primary;
+  font-weight: $font-weight-medium;
+}
+
+.modal-btn:active {
+  background: $color-bg-tertiary;
 }
 </style>
