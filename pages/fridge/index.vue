@@ -52,9 +52,10 @@
 
       <!-- 冰箱卡片 -->
       <view
-        v-for="(item, index) in fridgeItems"
+        v-for="(item, index) in sortedFridgeItems"
         :key="item.id"
         class="fridge-card"
+        :class="{ 'zero-quantity': item.quantity === 0 }"
         :style="{ animationDelay: index * 0.05 + 's' }"
       >
         <!-- 过期提醒 -->
@@ -324,6 +325,17 @@ export default {
       }
       return result;
     },
+    // 排序后的冰箱列表，数量为0的排在后面
+    sortedFridgeItems() {
+      return [...this.fridgeItems].sort((a, b) => {
+        const aQty = a.quantity || 0;
+        const bQty = b.quantity || 0;
+        // 数量为0的排在后面
+        if (aQty === 0 && bQty !== 0) return 1;
+        if (aQty !== 0 && bQty === 0) return -1;
+        return 0;
+      });
+    },
   },
   onShow() {
     this.loadData();
@@ -440,8 +452,7 @@ export default {
       }
     },
     async decreaseQuantity(item) {
-      if (item.quantity <= 1) {
-        this.confirmRemove(item);
+      if (item.quantity <= 0) {
         return;
       }
       try {
@@ -736,6 +747,19 @@ export default {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* 数量为0的卡片样式 */
+.fridge-card.zero-quantity {
+  opacity: 0.5;
+
+  .item-name {
+    color: $color-text-tertiary;
+  }
+
+  .quantity-value {
+    color: $color-text-tertiary;
   }
 }
 
