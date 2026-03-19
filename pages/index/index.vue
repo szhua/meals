@@ -70,8 +70,8 @@
 								</view>
 							</view>
 							<view class="meal-dishes" v-if="todayMeals.breakfast.length">
-								<text v-for="id in todayMeals.breakfast" :key="id"
-									class="dish-text">{{ getDishName(id) }}</text>
+								<text v-for="item in getGroupedDishes(todayMeals.breakfast)" :key="item.dishId"
+									class="dish-text">{{ getDishName(item.dishId) }}<text v-if="item.quantity > 1" class="dish-qty"> x{{ item.quantity }}</text></text>
 							</view>
 							<text v-else class="empty-meal">点击添加菜品</text>
 						</view>
@@ -87,8 +87,8 @@
 								</view>
 							</view>
 							<view class="meal-dishes" v-if="todayMeals.lunch.length">
-								<text v-for="id in todayMeals.lunch" :key="id"
-									class="dish-text">{{ getDishName(id) }}</text>
+								<text v-for="item in getGroupedDishes(todayMeals.lunch)" :key="item.dishId"
+									class="dish-text">{{ getDishName(item.dishId) }}<text v-if="item.quantity > 1" class="dish-qty"> x{{ item.quantity }}</text></text>
 							</view>
 							<text v-else class="empty-meal">点击添加菜品</text>
 						</view>
@@ -104,8 +104,8 @@
 								</view>
 							</view>
 							<view class="meal-dishes" v-if="todayMeals.dinner.length">
-								<text v-for="id in todayMeals.dinner" :key="id"
-									class="dish-text">{{ getDishName(id) }}</text>
+								<text v-for="item in getGroupedDishes(todayMeals.dinner)" :key="item.dishId"
+									class="dish-text">{{ getDishName(item.dishId) }}<text v-if="item.quantity > 1" class="dish-qty"> x{{ item.quantity }}</text></text>
 							</view>
 							<text v-else class="empty-meal">点击添加菜品</text>
 						</view>
@@ -610,6 +610,18 @@
 				const dish = this.dishes.find((d) => d.id === id);
 				return dish ? dish.name : "";
 			},
+			// 获取分组后的菜品列表（带数量）
+			getGroupedDishes(dishIds) {
+				const grouped = {};
+				dishIds.forEach((id) => {
+					if (grouped[id]) {
+						grouped[id].quantity++;
+					} else {
+						grouped[id] = { dishId: id, quantity: 1 };
+					}
+				});
+				return Object.values(grouped);
+			},
 			goToDetail() {
 				if (this.todayPlan) {
 					uni.navigateTo({
@@ -1016,6 +1028,11 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.dish-qty {
+		color: $color-primary;
+		font-weight: $font-weight-semibold;
 	}
 
 	.empty-meal {
