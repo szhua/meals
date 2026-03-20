@@ -144,7 +144,7 @@
     </scroll-view>
 
     <!-- 菜品选择弹窗 -->
-    <view class="dish-modal" v-if="showDishModal" @tap.self="closeModal">
+    <view class="dish-modal" v-if="showDishModal">
       <view class="modal-content">
         <view class="modal-header">
           <view class="modal-title-wrap">
@@ -260,6 +260,13 @@
             <text class="empty-text">未找到匹配的食材</text>
           </view>
         </scroll-view>
+
+        <!-- 底部关闭按钮 -->
+        <view class="modal-footer">
+          <view class="modal-close-btn" @tap="closeModal">
+            <text class="close-btn-text">关闭</text>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -1034,6 +1041,7 @@ export default {
 .modal-content {
   width: 100%;
   max-height: 85vh;
+  min-height: 50vh;
   background: $color-bg-primary;
   border-radius: 32rpx 32rpx 0 0;
   display: flex;
@@ -1172,6 +1180,34 @@ export default {
   flex: 1;
   padding: 0 $spacing-md $spacing-md;
   max-height: 60vh;
+}
+
+/* 底部关闭按钮 */
+.modal-footer {
+  padding: $spacing-md;
+  padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
+  border-top: 1rpx solid $color-divider;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  background: $color-bg-tertiary;
+  border-radius: $radius-lg;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:active {
+  background: $color-border;
+  transform: scale(0.98);
+}
+
+.modal-close-btn .close-btn-text {
+  font-size: $font-size-base;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
 }
 
 .modal-dish-item {
