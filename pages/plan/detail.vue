@@ -167,6 +167,35 @@
           />
         </view>
 
+        <!-- 分类筛选 -->
+        <scroll-view
+          class="modal-category-scroll"
+          scroll-x
+          :scroll-with-animation="true"
+          :show-scrollbar="false"
+          enable-flex
+        >
+          <view class="modal-category-list">
+            <view
+              class="modal-category-item"
+              :class="{ active: !modalCategory }"
+              @tap="selectModalCategory('')"
+            >
+              <text class="category-text">全部</text>
+            </view>
+            <view
+              v-for="cat in categories"
+              :key="cat.id"
+              class="modal-category-item"
+              :class="{ active: String(modalCategory) === String(cat.id) }"
+              @tap="selectModalCategory(cat.id)"
+            >
+              <icon-park v-if="cat.icon" :name="cat.icon" size="20" />
+              <text class="category-text">{{ cat.name }}</text>
+            </view>
+          </view>
+        </scroll-view>
+
         <!-- 冰箱提示 -->
         <view class="fridge-tip" v-if="fridgeItems.length === 0">
           <icon-park name="fridge" size="48" />
@@ -343,6 +372,7 @@ export default {
       currentDate: "",
       currentMeal: "",
       searchKeyword: "",
+      modalCategory: "", // 弹窗分类筛选
       addingDishId: "",
       showSuccessToast: false,
       showDetailModal: false,
@@ -360,6 +390,14 @@ export default {
     },
     filteredFridgeItems() {
       let result = this.fridgeItems;
+      // 分类筛选
+      if (this.modalCategory) {
+        result = result.filter((item) => {
+          const dish = this.dishes.find((d) => d.id === item.dishId);
+          return dish && String(dish.categoryId) === String(this.modalCategory);
+        });
+      }
+      // 搜索筛选
       if (this.searchKeyword) {
         result = result.filter((item) =>
           item.dishName.includes(this.searchKeyword)
@@ -488,12 +526,17 @@ export default {
       this.currentDate = date;
       this.currentMeal = meal;
       this.searchKeyword = "";
+      this.modalCategory = "";
       // 每次打开弹窗时重新加载冰箱数据
       await this.loadFridge();
       this.showDishModal = true;
     },
     closeModal() {
       this.showDishModal = false;
+      this.modalCategory = "";
+    },
+    selectModalCategory(id) {
+      this.modalCategory = id || "";
     },
     goToFridge() {
       this.showDishModal = false;
@@ -990,7 +1033,7 @@ export default {
 
 .modal-content {
   width: 100%;
-  max-height: 75vh;
+  max-height: 85vh;
   background: $color-bg-primary;
   border-radius: 32rpx 32rpx 0 0;
   display: flex;
@@ -1088,10 +1131,47 @@ export default {
   color: $color-text-primary;
 }
 
+/* 弹窗分类筛选 */
+.modal-category-scroll {
+  white-space: nowrap;
+  margin: 0 $spacing-md;
+  margin-bottom: $spacing-sm;
+}
+
+.modal-category-list {
+  display: inline-flex;
+  gap: 12rpx;
+}
+
+.modal-category-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 12rpx 20rpx;
+  background: $color-bg-secondary;
+  border-radius: $radius-full;
+  transition: all 0.2s;
+}
+
+.modal-category-item.active {
+  background: $color-primary-bg;
+  color: $color-primary-dark;
+}
+
+.modal-category-item .category-text {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.modal-category-item.active .category-text {
+  color: $color-primary-dark;
+  font-weight: $font-weight-medium;
+}
+
 .modal-list {
   flex: 1;
   padding: 0 $spacing-md $spacing-md;
-  max-height: 50vh;
+  max-height: 60vh;
 }
 
 .modal-dish-item {
