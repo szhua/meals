@@ -31,6 +31,12 @@
             <text class="stat-value" v-else>0</text>
             <text class="stat-label">即将过期</text>
           </view>
+          <!-- 自动移除开关 -->
+          <view class="stat-divider"></view>
+          <view class="stat-item auto-remove-toggle" @tap="toggleAutoRemove">
+            <text class="stat-value" :class="{ active: autoRemoveZero }">{{ autoRemoveZero ? '开' : '关' }}</text>
+            <text class="stat-label">自动移除</text>
+          </view>
         </view>
       </template>
 
@@ -283,6 +289,7 @@ export default {
       addingDishId: "",
       showSuccessToast: false,
       imageErrors: new Set(),
+      autoRemoveZero: true, // 自动移除数量为0的食材，默认开启
     };
   },
   computed: {
@@ -448,11 +455,26 @@ export default {
       if (item.quantity <= 0) {
         return;
       }
+      const newQuantity = item.quantity - 1;
+
+      // 如果减到0且开启自动移除，则直接移除
+      if (newQuantity === 0 && this.autoRemoveZero) {
+        try {
+          await api.removeFromFridge(item.id);
+          this.fridgeItems = this.fridgeItems.filter((i) => i.id !== item.id);
+          uni.showToast({ title: "已自动移除", icon: "none" });
+        } catch (error) {
+          console.error("移除失败:", error);
+          uni.showToast({ title: "操作失败", icon: "none" });
+        }
+        return;
+      }
+
       try {
         await api.updateFridgeItem(item.id, {
-          quantity: item.quantity - 1,
+          quantity: newQuantity,
         });
-        item.quantity -= 1;
+        item.quantity = newQuantity;
       } catch (error) {
         console.error("更新数量失败:", error);
         uni.showToast({ title: "操作失败", icon: "none" });
@@ -551,6 +573,13 @@ export default {
         },
       });
     },
+    toggleAutoRemove() {
+      this.autoRemoveZero = !this.autoRemoveZero;
+      uni.showToast({
+        title: this.autoRemoveZero ? '已开启自动移除' : '已关闭自动移除',
+        icon: 'none'
+      });
+    },
   },
 };
 </script>
@@ -603,6 +632,23 @@ export default {
   width: 1rpx;
   height: 40rpx;
   background: $color-border;
+}
+
+.auto-remove-toggle {
+  cursor: pointer;
+}
+
+.auto-remove-toggle .stat-value {
+  color: $color-text-tertiary;
+  font-size: $font-size-md;
+}
+
+.auto-remove-toggle .stat-value.active {
+  color: $color-primary;
+}
+
+.auto-remove-toggle:active {
+  opacity: 0.7;
 }
 
 /* ==================== 冰箱列表 ==================== */
